@@ -16,8 +16,12 @@ contract ArbitrageBotTest is Test {
 
     function testGetErkCoinPrice() public view {
         int256 got = bot.getErkCoinPrice();
-        int256 want = 5000;
+        int256 want = 6000e8;
 
         assertEq(got, want);
+    }
+
+    function testUsdToEther(int256 _amount) public returns (int256) {
+
     }
 }

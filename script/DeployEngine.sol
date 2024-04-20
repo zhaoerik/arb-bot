@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Script} from "forge-std/Script.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ErkCoin} from "../src/tokens/ErkCoin.sol";
 import {Weth} from "../src/tokens/Weth.sol";
 import {MockV3Aggregator} from "../test/MockV3Aggregator.sol";
@@ -13,9 +14,13 @@ contract DeployEngine is Script {
     error Error__PoolAddressFailure();
     
     uint8 constant DECIMALS = 8;
-    int256 constant ERK_INITIAL_PRICE = 5000;
-    int256 constant WETH_INITIAL_PRICE = 1000;
-    uint24 constant FEE = 3000; // 3%
+    int256 constant ERK_USD_INITIAL_PRICE = 6000e8;
+    int256 constant WETH_USD_INITIAL_PRICE = 3000e8;
+
+    uint24 constant FEE = 3000; // .3%
+
+    address[] priceFeeds;
+    SwapRouter[] routers;
 
     function run() external returns (ArbitrageBot) {
         // deployer key?
@@ -26,8 +31,18 @@ contract DeployEngine is Script {
         Weth weth = new Weth();
 
         // mock oracles
-        MockV3Aggregator erkPriceFeed = new MockV3Aggregator(DECIMALS, ERK_INITIAL_PRICE);
-        MockV3Aggregator wethPriceFeed = new MockV3Aggregator(DECIMALS, WETH_INITIAL_PRICE);
+        MockV3Aggregator erkPriceFeed = new MockV3Aggregator(DECIMALS, ERK_USD_INITIAL_PRICE);
+        MockV3Aggregator wethPriceFeed;
+
+        priceFeeds.push(address(erkPriceFeed));
+
+        if (block.chainid == 11155111) {
+            priceFeeds.push(0x694AA1769357215DE4FAC081bf1f309aDC325306); // sepolia address
+        } else { // anvil chain
+            wethPriceFeed = new MockV3Aggregator(DECIMALS, WETH_USD_INITIAL_PRICE);
+            priceFeeds.push(address(wethPriceFeed));
+        }
+        
 
         // factoryA, routerA, poolA
         UniswapV3Factory factoryA = new UniswapV3Factory();
@@ -47,8 +62,11 @@ contract DeployEngine is Script {
             revert Error__PoolAddressFailure();
         }
 
+        routers.push(routerA);
+        routers.push(routerB);
+
         // arbitrage bot
-        ArbitrageBot bot = new ArbitrageBot(erk, weth, address(erkPriceFeed), address(wethPriceFeed), routerA, routerB);
+        ArbitrageBot bot = new ArbitrageBot(erk, weth, priceFeeds, routers);
 
         vm.stopBroadcast();
 

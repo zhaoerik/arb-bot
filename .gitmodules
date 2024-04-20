@@ -12,4 +12,4 @@
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "lib/v3-periphery"]
 	path = lib/v3-periphery
-	url = https://github.com/Uniswap/v3-periphery
+	url = https://github.com/@uniswap/v3-periphery
